@@ -8,6 +8,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const VENDAS_FILE = path.join(__dirname, 'data', 'vendas.json');
 
+// Banco de dados
+const { createClient } = require('@supabase/supabase-js');
+const keys = require('./db/keys.json');
+const supabase = createClient(keys.SUPABASE_URL, keys.SUPABASE_KEY);
+
 // Middlewares
 app.use(cors());
 app.use(express.json());
@@ -47,6 +52,32 @@ async function salvarVendas(vendas) {
         return true;
     } catch (error) {
         console.error('Erro ao salvar vendas:', error);
+        return false;
+    }
+}
+
+async function salvarVendasSupabase(venda) {
+    try {
+        // Para cada produto, insere uma linha na tabela 'vendas'
+        const produtosParaInserir = venda.produtos.map(produto => ({
+            name: produto.nome,
+            sale_price: produto.precoVenda,
+            purchase_price: produto.precoCompra,
+            created_at: venda.dataVenda,
+            id: venda.id // opcional, se quiser usar o mesmo id para todos
+        }));
+
+        const { error } = await supabase
+            .from('vendas')
+            .insert(produtosParaInserir);
+
+        if (error) {
+            console.error('Erro ao salvar venda no Supabase:', error);
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error('Erro ao salvar venda no Supabase:', error);
         return false;
     }
 }
@@ -132,15 +163,16 @@ app.post('/api/vendas', async (req, res) => {
         vendas.push(novaVenda);
         
         const salvou = await salvarVendas(vendas);
+        const salvouSupabase = await salvarVendasSupabase(novaVenda);
         
-        if (salvou) {
+        if (salvou && salvouSupabase) {
             res.status(201).json({
                 success: true,
                 message: 'Venda criada com sucesso',
                 data: novaVenda
             });
         } else {
-            throw new Error('Falha ao salvar no arquivo');
+            throw new Error('Falha ao salvar no arquivo ou no Supabase');
         }
         
     } catch (error) {
