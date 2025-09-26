@@ -3,7 +3,7 @@
 let contadorProdutos = 0;
 
 // Configuração da API
-const API_BASE_URL = '/api'; // Caminho relativo para funcionar em produção
+const API_BASE_URL = 'http://localhost:3000/api'; // Ajuste conforme necessário
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', function() {
